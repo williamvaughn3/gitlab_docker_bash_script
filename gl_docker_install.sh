@@ -20,7 +20,7 @@ if [ `sudo id -u` -ne 0 ]; then echo -e "\r\n Must run as root" && exit 1; fi
 
 function check_args() {
     if [ $# -ne 1 ]; then
-        echo -e "\r\n Usage: $0 <temp password>"
+        echo -e "\r\n Usage: $0 <temp password> \r\n missing temp password. \r\n\r\n"
         exit 1
     else 
         export GITPASSWORD=$1
@@ -77,10 +77,15 @@ function set_git_IP() {
     cat /tmp/ipaddr.txt
     read -p "IP Address: (default $IPADDR1)" IPADDR
     if [[ -z $IPADDR ]] ; then
-        IPADDR=$IPADDR1
+        export IPADDR=$IPADDR1
     # check if IPADDR is in /tmp/ipaddr.txt
     elif [[ `grep $IPADDR /tmp/ipaddr.txt` ]] ; then
         echo -e "\n\r IP Address is: $IPADDR"
+        export $IPADDR
+    # remove this in base script for vagrant / packer ci job 
+    elif  [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+        echo -e "\n\r IP Address is: $IPADDR"
+        export $IPADDR
     else
         echo -e "\n\r Invalid IP Address"
         set_git_IP
@@ -104,6 +109,44 @@ function create_docker_home() {
 
 }
 
+function custom_ports_hostname() {
+    echo -e "\r\n Ports and hostname values are 
+    \r\n Ports: 8443 is for HTTPS, 8880 is for HTTP, 8822 is for SSH
+    \r\n Hostname: gitlab.local"
+    # ask if they want to use default ports and hostname
+    read -p "\r\n Do you want to use the default ports and hostname? [y/n]" REPLY
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo -e "\r\n Using default ports and hostname"
+        export HTTP_PORT=8880
+        export HTTPS_PORT=8443
+        export SSH_PORT=8822
+        export GITHOSTNAME=gitlab.local
+    else
+        echo -e "\r\n Select custom ports for Gitlab (default: 8443, 8880, 8822)"
+        read -p "HTTP port: " HTTP_PORT
+        if [[ -z $HTTP_PORT ]] ; then
+            echo -e "\r\n Using default: 8880"
+            export HTTP_PORT=8880
+        fi
+        read -p "HTTPS port: " HTTPS_PORT
+        if [[ -z $HTTPS_PORT ]] ; then
+            echo -e "\r\n Using default: 8443"
+            export HTTPS_PORT=8443
+        fi
+        read -p "SSH port: " SSH_PORT
+        if [[ -z $SSH_PORT ]] ; then
+            echo -e "\r\n Using default: 8822"
+            export SSH_PORT=8822
+        fi
+        read -p  "\r\n Enter host name Gitlab (default: gitlab.local)" GITHOSTNAME
+        if [[ -z $GITHOSTNAME ]] ; then
+            echo -e "\r\n Using default: gitlab.local"
+            export GITHOSTNAME=gitlab.local
+        fi
+    fi
+
+}
+
 function export_githome_vars() {
     export GITLAB_CONFIG=$GITLAB_HOME/config
     export GITLAB_LOGS=$GITLAB_HOME/logs
@@ -112,13 +155,14 @@ function export_githome_vars() {
 }
 
 
-function build_container() {
+function build_container() { 
+
 
 sudo docker run --detach \
-    --hostname gitlab.example.com \
-    --publish $IPADDR:8443:443 \
-    --publish $IPADDR:8880:80 \
-    --publish $IPADDR:8822:22 \
+    --hostname $GITHOSTNAME \
+    --publish $IPADDR:$HTTPS_PORT:443 \
+    --publish $IPADDR:$HTTP_PORT:80 \
+    --publish $IPADDR:$SSH_PORT:22 \
     --name gitlab \
     --restart always \
     --volume $GITLAB_HOME/config:/etc/gitlab \
@@ -134,8 +178,8 @@ function_cleanup() {
     clear    # setting home to /opt/gitlab
 
     echo -e "\r\n Notes:"
-    echo -e "\r\n Gitlab is now running. Please visit https://$IPADDR:8443 to finish setup, setup may still take a bit to finish."
-    echo -e "\r\n\r Please use the following username: root, password: $GITPASSWORD to login."
+    echo -e "\r\n Gitlab is now running. Please visit https://$IPADDR:$SSLPORT or to finish setup, setup may still take a bit to finish."
+    echo -e "\r\n\r Please use the following username: root, password: $GITLABPASSWORD to login."
     echo -e "\r\n Please change the password after login."
 
     unset GITLAB_DATA && echo 'Variable GITLAB_DATA is unset.'
@@ -152,6 +196,7 @@ function main() {
     check_gitlab 
     set_git_IP 
     create_docker_home
+    custom_ports_hostname
     export_githome_vars $1 
     build_container
     function_cleanup 
