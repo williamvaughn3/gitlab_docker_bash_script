@@ -15,7 +15,24 @@
 ##   Ansible Resources                                ##"
 ########################################################"
 
-Usage: $0 <"temp password">"
+Usage: gl_docker_install.sh <"temp password">"
 
 Change Password afterward
+
+
+
 ```
+
+##### IP Validation
+Didn't do input validation for IPs addresses.  1st IP is default, or enter the full ip that will be associated.
+
+set_git_ip function ommits interfaces: [ Tunnel, lo, bridge, doc, vir, veth, vm ]
+(needed for my use case) when providing acceptable input parameters.
+
+Default IP  is first returned not matching the above list 
+
+Validation if value exists in the /tmp/ipaddr.txt does occur.
+
+
+Not perfect, but works for what I need it to.
+
