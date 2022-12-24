@@ -112,9 +112,9 @@ function create_docker_home() {
 function custom_ports_hostname() {
     echo -e "\r\n Ports and hostname values are 
     \r\n Ports: 8443 is for HTTPS, 8880 is for HTTP, 8822 is for SSH
-    \r\n Hostname: gitlab.local"
+    \r\n Hostname: gitlab.local \r\n"
     # ask if they want to use default ports and hostname
-    read -p "\r\n Do you want to use the default ports and hostname? [y/n]" REPLY
+    read -p "Do you want to use the default ports and hostname? [y/n]" REPLY
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo -e "\r\n Using default ports and hostname"
         export HTTP_PORT=8880
