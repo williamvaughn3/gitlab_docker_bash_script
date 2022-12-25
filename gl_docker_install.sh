@@ -78,16 +78,12 @@ function set_git_IP() {
     read -p "IP Address: (default $IPADDR1)" IPADDR
     if [[ -z $IPADDR ]] ; then
         export IPADDR=$IPADDR1
-    # check if IPADDR is in /tmp/ipaddr.txt
-    elif [[ `grep $IPADDR /tmp/ipaddr.txt` ]] ; then
-        echo -e "\n\r IP Address is: $IPADDR"
-        export $IPADDR
-    # remove this in base script for vagrant / packer ci job 
-    elif  [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+    elif  [[ $IPADDR =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
         echo -e "\n\r IP Address is: $IPADDR"
         export $IPADDR
     else
         echo -e "\n\r Invalid IP Address"
+        sleep 2
         set_git_IP
     fi
 }
