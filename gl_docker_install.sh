@@ -147,7 +147,7 @@ function export_githome_vars() {
     export GITLAB_CONFIG=$GITLAB_HOME/config
     export GITLAB_LOGS=$GITLAB_HOME/logs
     export GITLAB_DATA=$GITLAB_HOME/data
-    export GITLAB_ROOT_PASSWORD= $GITPASSWORD # set this to your root password
+    export GITLAB_ROOT_PASSWORD=$GITPASSWORD # set this to your root password
 }
 
 
