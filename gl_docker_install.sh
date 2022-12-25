@@ -178,11 +178,23 @@ function_cleanup() {
     echo -e "\r\n\r Please use the following username: root, password: $GITPASSWORD to login."
     echo -e "\r\n Please change the password after login."
 
+
+    echo -e "Cleaning up and removing variable exports"
     unset GITLAB_DATA && echo 'Variable GITLAB_DATA is unset.'
     unset GITPASSWORD && echo 'Variable GITPASSWORD is unset.'
     unset GITLAB_ROOT_PASSWORD && echo 'Variable GITLAB_ROOT_PASSWORD is unset.'
+    unset GITLAB_HOME && echo 'Variable GITLAB_HOME is unset.'
+    unset GITLAB_CONFIG && echo 'Variable GITLAB_CONFIG is unset.'
+    unset GITLAB_LOGS && echo 'Variable GITLAB_LOGS is unset.'
+    unset IPADDR && echo 'Variable IPADDR is unset.'
+    unset HTTP_PORT && echo 'Variable HTTP_PORT is unset.'
+    unset HTTPS_PORT && echo 'Variable HTTPS_PORT is unset.'
+    unset SSH_PORT && echo 'Variable SSH_PORT is unset.'
+    unset GITHOSTNAME && echo 'Variable GITHOSTNAME is unset.'
+    unset GITPASSWORD && echo 'Variable GITPASSWORD is unset.'
 
-    
+
+
 }
 
 
