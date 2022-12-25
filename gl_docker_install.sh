@@ -165,7 +165,7 @@ sudo docker run --detach \
     --volume $GITLAB_HOME/logs:/var/log/gitlab \
     --volume $GITLAB_HOME/data:/var/opt/gitlab \
     --shm-size 256m \
-    gitlab/gitlab-ee:latest
+    gitlab/gitlab-ce:latest
 
 sudo docker exec -it gitlab gitlab-ctl reconfigure
 }
