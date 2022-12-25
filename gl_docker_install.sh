@@ -174,7 +174,7 @@ function_cleanup() {
     clear    # setting home to /opt/gitlab
 
     echo -e "\r\n Notes:"
-    echo -e "\r\n Gitlab is now running. Please visit https://$IPADDR:$HTTPS_PORT or to finish setup, setup may still take a bit to finish."
+    echo -e "\r\n Gitlab is now running. Please visit https://$IPADDR:$HTTP_PORT or to finish setup, setup may still take a bit to finish."
     echo -e "\r\n\r Please use the following username: root, password: $GITPASSWORD to login."
     echo -e "\r\n Please change the password after login."
 
