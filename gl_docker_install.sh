@@ -18,15 +18,6 @@ echo -e "#####################################################\n\r"
 
 if [ `sudo id -u` -ne 0 ]; then echo -e "\r\n Must run as root" && exit 1; fi
 
-function check_args() {
-    if [ $# -ne 1 ]; then
-        echo -e "\r\n Usage: $0 <temp password> \r\n missing temp password. \r\n\r\n"
-        exit 1
-    else 
-        export GITPASSWORD=$1
-    fi
-    
-} 
 
 function check_docker() {
     if  [[ `which docker` == null ]] ; then
@@ -147,9 +138,7 @@ function export_githome_vars() {
     export GITLAB_CONFIG=$GITLAB_HOME/config
     export GITLAB_LOGS=$GITLAB_HOME/logs
     export GITLAB_DATA=$GITLAB_HOME/data
-    export GITLAB_ROOT_PASSWORD= $GITPASSWORD # set this to your root password
 }
-
 
 function build_container() { 
 
@@ -167,17 +156,36 @@ sudo docker run --detach \
     --shm-size 256m \
     gitlab/gitlab-ce:latest
 
-sudo docker exec -it gitlab gitlab-ctl reconfigure
+sleep 30s
+export GITPASSWORD=`sudo docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password`
+
+
 }
 
+
+function set_rails_env() {
+    rm -rf /tmp/gitlab.sh || true
+    echo -e "\r\n Setting up Gitlab"
+    echo -e "\r\n Please wait, this may take a few minutes"
+    echo "Creating gitlab.rb file"
+    echo '#!/bin/bash' | tee  /tmp/gitlab.sh
+    echo "gitlab-ctl reconfigure && sleep 30s" | tee -a /tmp/gitlab.sh
+    echo "gitlab-ctl restart" | tee -a /tmp/gitlab.sh
+    chmod +x /tmp/gitlab.sh
+    sudo docker cp /tmp/gitlab.sh gitlab:/tmp/gitlab.sh
+    sudo docker exec -it gitlab /tmp/gitlab.sh
+    sleep 1s
+    for x in {1..9}; do
+        for i in {1..10}; do
+            echo -e "\r\n"
+            sudo docker logs gitlab
+            sleep 2s
+        done
+    done
+}
+
+
 function_cleanup() {
-    clear    # setting home to /opt/gitlab
-
-    echo -e "\r\n Notes:"
-    echo -e "\r\n Gitlab is now running. Please visit https://$IPADDR:$HTTPS_PORT or to finish setup, setup may still take a bit to finish."
-    echo -e "\r\n\r Please use the following username: root, password: $GITPASSWORD to login."
-    echo -e "\r\n Please change the password after login."
-
 
     echo -e "Cleaning up and removing variable exports"
     unset GITLAB_DATA && echo 'Variable GITLAB_DATA is unset.'
@@ -191,25 +199,32 @@ function_cleanup() {
     unset HTTPS_PORT && echo 'Variable HTTPS_PORT is unset.'
     unset SSH_PORT && echo 'Variable SSH_PORT is unset.'
     unset GITHOSTNAME && echo 'Variable GITHOSTNAME is unset.'
-    unset GITPASSWORD && echo 'Variable GITPASSWORD is unset.'
 
-
-
+    echo -e "\r\n removing /tmp/gitlab.sh"
+    sudo rm -rf /tmp/gitlab.sh
 }
 
 
+
+
 function main() {
-    check_args $1 
+    #check_args $1 
     check_docker 
     check_gitlab 
     set_git_IP 
     create_docker_home
     custom_ports_hostname
-    export_githome_vars $1 
     build_container
+    set_rails_env
+
+    echo -e "\n\r Notes:"
+    echo -e "\n\r Gitlab is now running. Please visit https://$IPADDR:$HTTPS_PORT or to finish setup, setup may still take a bit to finish."
+    echo -e "\n\r Please use the following \n\r username: root \n\r Password: $GITPASSWORD to login."
+    echo -e "\r\n Please change the password after login."
+    
     function_cleanup 
 }
 
 
-main $1
+main
 
