@@ -169,13 +169,6 @@ function set_rails_env() {
     echo -e "\r\n Gitlab password is: $GITPASSWORD \r\n"
     read -p "Press any key to continue after you have copied the password..." -n1 -s
 
-    for i in seq 1 30; do
-   
-        docker logs gitlab
-
-        sleep 3
-    done
-
     export GITLAB_ROOT_PASSWORD=`cat /tmp/gitpassword.txt | awk '{print $2}'`
 }
 
@@ -263,6 +256,10 @@ echo -e "\r\n Gitlab container created."
 
 
 set_rails_env
+for i in  {1..60}; do
+    docker logs gitlab
+    sleep 2
+done
 
 echo -e "\n\r Notes:"
 echo -e "\n\r Gitlab is now running. Please visit https://$IPADDR:$HTTP_PORT or to finish setup, setup may still take a bit to finish."
