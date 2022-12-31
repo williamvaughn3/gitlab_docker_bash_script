@@ -157,7 +157,6 @@ sudo docker run --detach \
     gitlab/gitlab-ce:latest
 
 sleep 30s
-export GITPASSWORD=`sudo docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password`
 
 
 }
@@ -165,6 +164,19 @@ export GITPASSWORD=`sudo docker exec -it gitlab grep 'Password:' /etc/gitlab/ini
 
 function set_rails_env() {
     rm -rf /tmp/gitlab.sh || true
+
+
+    GITPASSWORD=`sudo docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password`
+    if [[ -z $GITPASSWORD ]] ; then
+        echo -e "\r\n Gitlab password is not set...waiting..."
+        sleep 2
+        set_rails_env
+    else
+        echo -e "\r\n Gitlab password is set"
+        sleep 2
+    fi
+
+    echo $GITPASSWORD > /tmp/gitpassword.txt
     echo -e "\r\n Setting up Gitlab"
     echo -e "\r\n Please wait, this may take a few minutes"
     echo "Creating gitlab.rb file"
@@ -219,9 +231,10 @@ function main() {
 
     echo -e "\n\r Notes:"
     echo -e "\n\r Gitlab is now running. Please visit https://$IPADDR:$HTTPS_PORT or to finish setup, setup may still take a bit to finish."
-    echo -e "\n\r Please use the following \n\r username: root \n\r Password: $GITPASSWORD to login."
+    echo -e "\n\r Please use the following \n\r username: root \n\r Password: `cat /tmp/gitpassword.txt && rm /tmp/gitpassword.txt` to login."
     echo -e "\r\n Please change the password after login."
     
+
     function_cleanup 
 }
 
