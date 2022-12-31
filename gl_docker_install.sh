@@ -82,28 +82,30 @@ function set_git_IP() {
 function create_docker_home() {
     echo -e "\r\n select gitlab home directory (default: /opt/gitlab/)"
     read -p "Gitlab home directory: " GITLAB_HOME
-    if [[ -z $GITLAB_HOME ]] ; then
+    if [[ $GITLAB_HOME ]] ; then
+        echo -e "\r\n Using $GITLAB_HOME"
+        rm -rf $GITLAB_HOME/* || true #clear out the directory
+        for i in config logs data; do
+            mkdir -p $GITLAB_HOME/$i
+        done     
+    elif [[ -z $GITLAB_HOME ]] ; then 
         echo -e "\r\n Using default: /opt/gitlab/"
         GITLAB_HOME=/opt/gitlab/
+        rm -rf $GITLAB_HOME/* || true #clear out the directory
         for i in config logs data; do
-        # if dir exists delete it and create new one
-            if [[ -d $GITLAB_HOME/$i ]] ; then
-                echo -e "\r\n Directory exists, deleting..."
-                rm -rf $GITLAB_HOME/$i
-            fi
             mkdir -p $GITLAB_HOME/$i
         done
-        elif [[ ! -d $GITLAB_HOME ]] ; then
-            echo -e "\r\n Directory does not exist, creating..."
-            for i in config logs data; do
-                mkdir -p $GITLAB_HOME/$i
-            done
+    elif [[ ! -d $GITLAB_HOME ]] ; then
+        echo -e "\r\n Directory does not exist, creating..."
+        mkdir -p $GITLAB_HOME
+        for i in config logs data; do
+            mkdir -p $GITLAB_HOME/$i
+        done
             GITLAB_HOME=/opt/gitlab/
-        else
-            create_docker_home
+    else
+        create_docker_home
     fi
-        export GITLAB_HOME=$GITLAB_HOME
-
+export GITLAB_HOME=$GITLAB_HOME
 }
 
 function custom_ports_hostname() {
@@ -154,24 +156,13 @@ function export_githome_vars() {
 
 
 function set_rails_env() {
-    rm -rf /tmp/gitlab.sh || true
-    
-
     GITPASSWORD=`sudo docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password`
     echo 'waiting for gitlab to start...'
     
-    if [[ -z $GITPASSWORD ]] ; then
+    if [[ -z $GITPASSWORD || -z `echo $GITPASSWORD | grep -v 'No' ` ]] ; then
         echo -e "\r\n Gitlab password is not set...waiting..."
         sleep 2
         clear
-        set_rails_envcd 
-
-    elif [[  ! `echo $GITPASSWORD | grep -v 'No such'` ]] ; then
-        echo -e "\n\r\n\r Gitlab password is not set...waiting..."
-        sleep 2
-        clear
-        docker logs gitlab
-        sleep 1s
         set_rails_env
     else 
         echo -e "\r\n Gitlab password is set"
@@ -179,21 +170,17 @@ function set_rails_env() {
     fi
 
     echo $GITPASSWORD > /tmp/gitpassword.txt
-    echo -e "\r\n Finishing Setup"
-    echo -e "\r\n Please wait a few more minutes"
-    echo "Creating gitlab.rb file"
-    echo '#!/bin/bash' | tee  /tmp/gitlab.sh
-    chmod +x /tmp/gitlab.sh
-    sudo docker cp /tmp/gitlab.sh gitlab:/tmp/gitlab.sh
-    sudo docker exec -it gitlab /tmp/gitlab.sh
-    sleep 1s
-    for x in {1..9}; do
-        for i in {1..10}; do
-            echo -e "\r\n"
-            sudo docker logs gitlab
-            sleep 2s
-        done
+    echo -e "\r\n Gitlab password is: $GITPASSWORD"
+    read -p "Press any key to continue after you have copied the password..." -n1 -s
+
+    for i in {1..22}; do
+        echo -e "\r\n"
+        sudo docker logs gitlab
+        sleep 4s 
+        echo -e "\r\n $i"
     done
+
+    export GITLAB_ROOT_PASSWORD=`cat /tmp/gitpassword.txt | awk '{print $2}'`
 }
 
 
@@ -218,21 +205,38 @@ function_cleanup() {
 
 
 
+function post_install(){
+
+    echo -e "\r\n After you have changed your password, we can finish.  
+    \r\n Please login to Gitlab and change your password, then press any key to continue"
+    read -p "Press any key to continue... " -n1 -s
+
+    echo -e "\r\n Finishing Gitlab setup"
+    echo -e "\r\n Please wait, this may take a few minutes"
+    echo "Creating gitlab.rb file"
+    echo '#!/bin/bash' | tee  /tmp/gitlab.sh
+    echo "gitlab-ctl reconfigure && sleep 30s" | tee -a /tmp/gitlab.sh
+    echo "gitlab-ctl restart" | tee -a /tmp/gitlab.sh
+    chmod +x /tmp/gitlab.sh
+    sudo docker cp /tmp/gitlab.sh gitlab:/tmp/gitlab.sh
+    sudo docker exec -it gitlab /tmp/gitlab.sh
+    sleep 1s
+}
+
+
 
 function main() {
 
 check_docker 
-
 check_gitlab 
-
 set_git_IP 
-
 create_docker_home
 custom_ports_hostname
 export_githome_vars
 
-
+# Run Gitlab container
 echo -e "\r\n Creating Gitlab container..."
+
 sudo docker run --detach \
     --hostname $GITHOSTNAME \
     --publish $HTTPS_PORT:443 \
@@ -247,8 +251,8 @@ sudo docker run --detach \
 
 echo -e "\r\n Gitlab container created."
 
-sudo docker ps -a
-
+# Wait for Gitlab to start
+echo -e "\r\n Waiting for Gitlab to start..."
 set_rails_env
 
  echo -e "\n\r Notes:"
@@ -258,6 +262,7 @@ set_rails_env
     
 
     function_cleanup 
+    post_install
 }
 
 
