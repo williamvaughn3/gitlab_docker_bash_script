@@ -262,7 +262,7 @@ for i in  {1..60}; do
 done
 
 echo -e "\n\r Notes:"
-echo -e "\n\r Gitlab is now running. Please visit https://$IPADDR:$HTTP_PORT or to finish setup, setup may still take a bit to finish."
+echo -e "\n\r Gitlab is now running. Please visit http://$IPADDR:$HTTP_PORT or to finish setup, setup may still take a bit to finish."
 echo -e "\n\r Please use the following \n\r username: root \n\r Password: `cat /tmp/gitpassword.txt && rm /tmp/gitpassword.txt` to login."
 echo -e "\r\n Please change the password after login."
 
