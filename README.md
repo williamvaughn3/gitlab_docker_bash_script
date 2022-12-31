@@ -1,4 +1,4 @@
-# gitlab_docker_bash_script
+### gitlab_docker_bash_script
 
 ```
 ########################################################"
@@ -15,9 +15,18 @@
 ##   Ansible Resources                                ##"
 ########################################################"
 
-Usage: gl_docker_install.sh <"temp password">"
+Usage: gl_docker_install.sh 
 
-Change Password afterward
+```
+
+#### After Completion
+
+Change Password afterward inital login
+
+Most work done with Omnibus chef recipies.
+
+
+
 
 
 
