@@ -156,35 +156,31 @@ function export_githome_vars() {
 
 
 function set_rails_env() {
-    GITPASSWORD=`sudo docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password`
     echo 'waiting for gitlab to start...'
     
-    if [[ -z $GITPASSWORD || -z `echo $GITPASSWORD | grep -v 'No' ` ]] ; then
+    while [[ -z $GITPASSWORD || -z `echo $GITPASSWORD | grep -v 'No' ` ]] ; do
+        GITPASSWORD=`sudo docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password`
         echo -e "\r\n Gitlab password is not set...waiting..."
         sleep 2
         clear
-        set_rails_env
-    else 
-        echo -e "\r\n Gitlab password is set"
-        echo -e "\r\n $GITPASSWORD"
-    fi
+    done
 
     echo $GITPASSWORD > /tmp/gitpassword.txt
-    echo -e "\r\n Gitlab password is: $GITPASSWORD"
+    echo -e "\r\n Gitlab password is: $GITPASSWORD \r\n"
     read -p "Press any key to continue after you have copied the password..." -n1 -s
 
-    for i in {1..22}; do
-        echo -e "\r\n"
-        sudo docker logs gitlab
-        sleep 4s 
-        echo -e "\r\n $i"
+    for i in seq 1 30; do
+   
+        docker logs gitlab
+
+        sleep 3
     done
 
     export GITLAB_ROOT_PASSWORD=`cat /tmp/gitpassword.txt | awk '{print $2}'`
 }
 
 
-function_cleanup() {
+function cleanup() {
 
     echo -e "Cleaning up and removing variable exports"
     unset GITLAB_DATA && echo 'Variable GITLAB_DATA is unset.'
@@ -200,7 +196,11 @@ function_cleanup() {
     unset GITHOSTNAME && echo 'Variable GITHOSTNAME is unset.'
 
     echo -e "\r\n removing /tmp/gitlab.sh"
-    sudo rm -rf /tmp/gitlab.sh
+    sudo rm -rf /tmp/gitlab.sh || true
+    echo -e "\r\n removing /tmp/gitpassword.txt"
+    sudo rm -rf /tmp/gitpassword.txt || true
+    echo -e "\r\n removing /tmp/gitlab.rb"
+    sudo rm -rf /tmp/gitlab.rb || true
 }
 
 
@@ -210,17 +210,27 @@ function post_install(){
     echo -e "\r\n After you have changed your password, we can finish.  
     \r\n Please login to Gitlab and change your password, then press any key to continue"
     read -p "Press any key to continue... " -n1 -s
+    read -p "Are you ready to finish the setup? [y/n]" REPLY
+    
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo -e "\r\n Finishing Gitlab setup"
+        echo -e "\r\n Please wait, this may take a few minutes"
+        echo "Creating gitlab.rb file"
+        echo '#!/bin/bash' | tee  /tmp/gitlab.sh
+        echo "gitlab-ctl reconfigure && sleep 30s" | tee -a /tmp/gitlab.sh
+        echo "gitlab-ctl restart" | tee -a /tmp/gitlab.sh
 
-    echo -e "\r\n Finishing Gitlab setup"
-    echo -e "\r\n Please wait, this may take a few minutes"
-    echo "Creating gitlab.rb file"
-    echo '#!/bin/bash' | tee  /tmp/gitlab.sh
-    echo "gitlab-ctl reconfigure && sleep 30s" | tee -a /tmp/gitlab.sh
-    echo "gitlab-ctl restart" | tee -a /tmp/gitlab.sh
-    chmod +x /tmp/gitlab.sh
-    sudo docker cp /tmp/gitlab.sh gitlab:/tmp/gitlab.sh
-    sudo docker exec -it gitlab /tmp/gitlab.sh
-    sleep 1s
+        chmod +x /tmp/gitlab.sh
+        sudo docker cp /tmp/gitlab.sh gitlab:/tmp/gitlab.sh
+
+        echo 'Last warning, running cleanup, press any key to continue...'
+        read -p "Press any key to continue... " -n1 -s
+    
+        sudo docker exec -it gitlab /tmp/gitlab.sh
+        sleep 1s
+        sudo docker exec -it gitlab gitlab-ctl status
+        cleanup
+    fi 
 }
 
 
@@ -251,18 +261,16 @@ sudo docker run --detach \
 
 echo -e "\r\n Gitlab container created."
 
-# Wait for Gitlab to start
-echo -e "\r\n Waiting for Gitlab to start..."
+
 set_rails_env
 
- echo -e "\n\r Notes:"
- echo -e "\n\r Gitlab is now running. Please visit https://$IPADDR:$HTTP_PORT or to finish setup, setup may still take a bit to finish."
- echo -e "\n\r Please use the following \n\r username: root \n\r Password: `cat /tmp/gitpassword.txt && rm /tmp/gitpassword.txt` to login."
- echo -e "\r\n Please change the password after login."
-    
+echo -e "\n\r Notes:"
+echo -e "\n\r Gitlab is now running. Please visit https://$IPADDR:$HTTP_PORT or to finish setup, setup may still take a bit to finish."
+echo -e "\n\r Please use the following \n\r username: root \n\r Password: `cat /tmp/gitpassword.txt && rm /tmp/gitpassword.txt` to login."
+echo -e "\r\n Please change the password after login."
 
-    function_cleanup 
-    post_install
+post_install
+
 }
 
 
