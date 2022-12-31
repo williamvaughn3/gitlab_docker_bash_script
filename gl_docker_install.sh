@@ -84,10 +84,15 @@ function create_docker_home() {
     read -p "Gitlab home directory: " GITLAB_HOME
     if [[ -z $GITLAB_HOME ]] ; then
         echo -e "\r\n Using default: /opt/gitlab/"
-        GITLAB_HOME=/opt/gitlab/{config,logs,data}
+        GITLAB_HOME=/opt/gitlab/
+        for i in config logs data; do
+            mkdir -p $GITLAB_HOME/$i
+        done
         elif [[ ! -d $GITLAB_HOME ]] ; then
             echo -e "\r\n Directory does not exist, creating..."
-            mkdir -p $GITLAB_HOME/{config,logs,data}
+            for i in config logs data; do
+                mkdir -p $GITLAB_HOME/$i
+            done
             GITLAB_HOME=/opt/gitlab/
         else
             create_docker_home
@@ -135,6 +140,7 @@ function custom_ports_hostname() {
 }
 
 function export_githome_vars() {
+    export GITLAB_HOME=$GITLAB_HOME
     export GITLAB_CONFIG=$GITLAB_HOME/config
     export GITLAB_LOGS=$GITLAB_HOME/logs
     export GITLAB_DATA=$GITLAB_HOME/data
@@ -224,7 +230,9 @@ export_githome_vars
 echo -e "\r\n Creating Gitlab container..."
 sudo docker run --detach \
     --hostname $GITHOSTNAME \
-    --publish $HTTPS_PORT:443 --publish $HTTP_PORT:80 --publish $SSH_PORT:22 \
+    --publish $HTTPS_PORT:443 \
+    --publish $HTTP_PORT:80 \
+    --publish $SSH_PORT:22 \
     --name gitlab \
     --restart always \
     --volume $GITLAB_CONFIG:/etc/gitlab \
