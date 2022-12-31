@@ -86,6 +86,11 @@ function create_docker_home() {
         echo -e "\r\n Using default: /opt/gitlab/"
         GITLAB_HOME=/opt/gitlab/
         for i in config logs data; do
+        # if dir exists delete it and create new one
+            if [[ -d $GITLAB_HOME/$i ]] ; then
+                echo -e "\r\n Directory exists, deleting..."
+                rm -rf $GITLAB_HOME/$i
+            fi
             mkdir -p $GITLAB_HOME/$i
         done
         elif [[ ! -d $GITLAB_HOME ]] ; then
@@ -144,6 +149,7 @@ function export_githome_vars() {
     export GITLAB_CONFIG=$GITLAB_HOME/config
     export GITLAB_LOGS=$GITLAB_HOME/logs
     export GITLAB_DATA=$GITLAB_HOME/data
+
 }
 
 
@@ -227,6 +233,7 @@ create_docker_home
 custom_ports_hostname
 export_githome_vars
 
+
 echo -e "\r\n Creating Gitlab container..."
 sudo docker run --detach \
     --hostname $GITHOSTNAME \
@@ -247,7 +254,7 @@ sudo docker ps -a
 set_rails_env
 
  echo -e "\n\r Notes:"
- echo -e "\n\r Gitlab is now running. Please visit https://$IPADDR:$HTTPS_PORT or to finish setup, setup may still take a bit to finish."
+ echo -e "\n\r Gitlab is now running. Please visit https://$IPADDR:$HTTP_PORT or to finish setup, setup may still take a bit to finish."
  echo -e "\n\r Please use the following \n\r username: root \n\r Password: `cat /tmp/gitpassword.txt && rm /tmp/gitpassword.txt` to login."
  echo -e "\r\n Please change the password after login."
     
@@ -257,4 +264,5 @@ set_rails_env
 
 
 main
+
 
