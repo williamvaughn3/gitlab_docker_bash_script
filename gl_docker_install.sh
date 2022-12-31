@@ -183,8 +183,6 @@ function set_rails_env() {
     echo -e "\r\n Please wait a few more minutes"
     echo "Creating gitlab.rb file"
     echo '#!/bin/bash' | tee  /tmp/gitlab.sh
-    echo "gitlab-ctl reconfigure && sleep 30s" | tee -a /tmp/gitlab.sh
-    echo "gitlab-ctl restart" | tee -a /tmp/gitlab.sh
     chmod +x /tmp/gitlab.sh
     sudo docker cp /tmp/gitlab.sh gitlab:/tmp/gitlab.sh
     sudo docker exec -it gitlab /tmp/gitlab.sh
