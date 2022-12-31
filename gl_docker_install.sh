@@ -140,45 +140,35 @@ function export_githome_vars() {
     export GITLAB_DATA=$GITLAB_HOME/data
 }
 
-function build_container() { 
-
-
-sudo docker run --detach \
-    --hostname $GITHOSTNAME \
-    --publish $IPADDR:$HTTPS_PORT:443 \
-    --publish $IPADDR:$HTTP_PORT:80 \
-    --publish $IPADDR:$SSH_PORT:22 \
-    --name gitlab \
-    --restart always \
-    --volume $GITLAB_HOME/config:/etc/gitlab \
-    --volume $GITLAB_HOME/logs:/var/log/gitlab \
-    --volume $GITLAB_HOME/data:/var/opt/gitlab \
-    --shm-size 256m \
-    gitlab/gitlab-ce:latest
-
-sleep 30s
-
-
-}
-
 
 function set_rails_env() {
     rm -rf /tmp/gitlab.sh || true
-
+    
 
     GITPASSWORD=`sudo docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password`
+    echo 'waiting for gitlab to start...'
+    
     if [[ -z $GITPASSWORD ]] ; then
         echo -e "\r\n Gitlab password is not set...waiting..."
         sleep 2
-        set_rails_env
-    else
-        echo -e "\r\n Gitlab password is set"
+        clear
+        set_rails_envcd 
+
+    elif [[  ! `echo $GITPASSWORD | grep -v 'No such'` ]] ; then
+        echo -e "\n\r\n\r Gitlab password is not set...waiting..."
         sleep 2
+        clear
+        docker logs gitlab
+        sleep 1s
+        set_rails_env
+    else 
+        echo -e "\r\n Gitlab password is set"
+        echo -e "\r\n $GITPASSWORD"
     fi
 
     echo $GITPASSWORD > /tmp/gitpassword.txt
-    echo -e "\r\n Setting up Gitlab"
-    echo -e "\r\n Please wait, this may take a few minutes"
+    echo -e "\r\n Finishing Setup"
+    echo -e "\r\n Please wait a few more minutes"
     echo "Creating gitlab.rb file"
     echo '#!/bin/bash' | tee  /tmp/gitlab.sh
     echo "gitlab-ctl reconfigure && sleep 30s" | tee -a /tmp/gitlab.sh
@@ -220,19 +210,38 @@ function_cleanup() {
 
 
 function main() {
-    #check_args $1 
-    check_docker 
-    check_gitlab 
-    set_git_IP 
-    create_docker_home
-    custom_ports_hostname
-    build_container
-    set_rails_env
 
-    echo -e "\n\r Notes:"
-    echo -e "\n\r Gitlab is now running. Please visit https://$IPADDR:$HTTPS_PORT or to finish setup, setup may still take a bit to finish."
-    echo -e "\n\r Please use the following \n\r username: root \n\r Password: `cat /tmp/gitpassword.txt && rm /tmp/gitpassword.txt` to login."
-    echo -e "\r\n Please change the password after login."
+check_docker 
+
+check_gitlab 
+
+set_git_IP 
+
+create_docker_home
+custom_ports_hostname
+export_githome_vars
+
+echo -e "\r\n Creating Gitlab container..."
+sudo docker run --detach \
+    --hostname $GITHOSTNAME \
+    --publish $HTTPS_PORT:443 --publish $HTTP_PORT:80 --publish $SSH_PORT:22 \
+    --name gitlab \
+    --restart always \
+    --volume $GITLAB_CONFIG:/etc/gitlab \
+    --volume $GITLAB_LOGS:/var/log/gitlab \
+    --volume $GITLAB_DATA:/var/opt/gitlab \
+    gitlab/gitlab-ce:latest
+
+echo -e "\r\n Gitlab container created."
+
+sudo docker ps -a
+
+set_rails_env
+
+ echo -e "\n\r Notes:"
+ echo -e "\n\r Gitlab is now running. Please visit https://$IPADDR:$HTTPS_PORT or to finish setup, setup may still take a bit to finish."
+ echo -e "\n\r Please use the following \n\r username: root \n\r Password: `cat /tmp/gitpassword.txt && rm /tmp/gitpassword.txt` to login."
+ echo -e "\r\n Please change the password after login."
     
 
     function_cleanup 
